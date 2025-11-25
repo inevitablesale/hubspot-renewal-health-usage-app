@@ -136,7 +136,8 @@ describe('Onboarding Service', () => {
       score.milestones.forEach(milestone => {
         expect(milestone).toHaveProperty('name');
         expect(milestone).toHaveProperty('completed');
-        expect(milestone).toHaveProperty('expectedBy');
+        expect(milestone).toHaveProperty('expectedByDay');
+        expect(milestone).toHaveProperty('expectedDate');
         expect(milestone).toHaveProperty('isAhaMoment');
         expect(milestone).toHaveProperty('weight');
       });

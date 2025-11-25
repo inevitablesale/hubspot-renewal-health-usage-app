@@ -9,16 +9,23 @@ import { getUsageEvents, calculateFeatureAdoption } from './usageEventsService';
  * Default milestone templates for SaaS onboarding
  * These can be customized per-customer or loaded from configuration
  */
-const DEFAULT_MILESTONES: Omit<OnboardingMilestone, 'completed' | 'completedAt'>[] = [
-  { name: 'first_login', expectedBy: '1', isAhaMoment: false, weight: 0.1 },
-  { name: 'profile_setup', expectedBy: '3', isAhaMoment: false, weight: 0.1 },
-  { name: 'first_feature_use', expectedBy: '3', isAhaMoment: true, weight: 0.15 },
-  { name: 'data_import', expectedBy: '7', isAhaMoment: false, weight: 0.1 },
-  { name: 'team_member_invited', expectedBy: '7', isAhaMoment: false, weight: 0.1 },
-  { name: 'integration_connected', expectedBy: '14', isAhaMoment: true, weight: 0.15 },
-  { name: 'first_workflow_created', expectedBy: '14', isAhaMoment: true, weight: 0.15 },
-  { name: 'report_generated', expectedBy: '21', isAhaMoment: false, weight: 0.1 },
-  { name: 'advanced_feature_used', expectedBy: '30', isAhaMoment: true, weight: 0.05 }
+interface DefaultMilestone {
+  name: string;
+  expectedByDay: number;
+  isAhaMoment: boolean;
+  weight: number;
+}
+
+const DEFAULT_MILESTONES: DefaultMilestone[] = [
+  { name: 'first_login', expectedByDay: 1, isAhaMoment: false, weight: 0.1 },
+  { name: 'profile_setup', expectedByDay: 3, isAhaMoment: false, weight: 0.1 },
+  { name: 'first_feature_use', expectedByDay: 3, isAhaMoment: true, weight: 0.15 },
+  { name: 'data_import', expectedByDay: 7, isAhaMoment: false, weight: 0.1 },
+  { name: 'team_member_invited', expectedByDay: 7, isAhaMoment: false, weight: 0.1 },
+  { name: 'integration_connected', expectedByDay: 14, isAhaMoment: true, weight: 0.15 },
+  { name: 'first_workflow_created', expectedByDay: 14, isAhaMoment: true, weight: 0.15 },
+  { name: 'report_generated', expectedByDay: 21, isAhaMoment: false, weight: 0.1 },
+  { name: 'advanced_feature_used', expectedByDay: 30, isAhaMoment: true, weight: 0.05 }
 ];
 
 /**
@@ -142,13 +149,21 @@ function evaluateMilestones(
   events: { eventType: string; timestamp: string }[], 
   startDate: string
 ): OnboardingMilestone[] {
-  const milestones: OnboardingMilestone[] = DEFAULT_MILESTONES.map(m => ({
-    ...m,
-    completed: false,
-    completedAt: undefined
-  }));
-  
   const startTime = new Date(startDate).getTime();
+  
+  // Create milestones with calculated expected dates
+  const milestones: OnboardingMilestone[] = DEFAULT_MILESTONES.map(m => {
+    const expectedDate = new Date(startTime + m.expectedByDay * 24 * 60 * 60 * 1000);
+    return {
+      name: m.name,
+      completed: false,
+      completedAt: undefined,
+      expectedByDay: m.expectedByDay,
+      expectedDate: expectedDate.toISOString(),
+      isAhaMoment: m.isAhaMoment,
+      weight: m.weight
+    };
+  });
   
   // Create a map of milestone completions
   const milestoneCompletions: Map<string, string> = new Map();
@@ -176,11 +191,6 @@ function evaluateMilestones(
       milestone.completed = true;
       milestone.completedAt = completedAt;
     }
-    
-    // Calculate expected completion date relative to start
-    const expectedDays = parseInt(milestone.expectedBy, 10);
-    const expectedDate = new Date(startTime + expectedDays * 24 * 60 * 60 * 1000);
-    milestone.expectedBy = expectedDate.toISOString();
   });
   
   return milestones;
@@ -192,11 +202,7 @@ function evaluateMilestones(
 function calculateMilestoneCoverage(milestones: OnboardingMilestone[], daysSinceOnboarding: number): number {
   // Filter to milestones that should be completed by now
   const relevantMilestones = milestones.filter(m => {
-    const expectedDays = Math.floor(
-      (new Date(m.expectedBy).getTime() - Date.now() + daysSinceOnboarding * 24 * 60 * 60 * 1000) / 
-      (24 * 60 * 60 * 1000)
-    );
-    return expectedDays <= daysSinceOnboarding || m.completed;
+    return m.expectedByDay <= daysSinceOnboarding || m.completed;
   });
   
   if (relevantMilestones.length === 0) {
@@ -215,7 +221,7 @@ function calculateMilestoneCoverage(milestones: OnboardingMilestone[], daysSince
       
       // Bonus for completing early
       const completedTime = m.completedAt ? new Date(m.completedAt).getTime() : Date.now();
-      const expectedTime = new Date(m.expectedBy).getTime();
+      const expectedTime = new Date(m.expectedDate).getTime();
       if (completedTime < expectedTime) {
         completedWeight += m.weight * 0.1; // 10% bonus for early completion
       }
@@ -307,7 +313,7 @@ function determineOnboardingStatus(
   const criticalMilestones = milestones.filter(m => m.weight >= 0.15);
   const criticalBlocked = criticalMilestones.some(m => {
     if (m.completed) return false;
-    const expectedTime = new Date(m.expectedBy).getTime();
+    const expectedTime = new Date(m.expectedDate).getTime();
     const daysPastExpected = (Date.now() - expectedTime) / (24 * 60 * 60 * 1000);
     return daysPastExpected > 7; // More than 7 days past expected
   });
@@ -414,7 +420,7 @@ function generateOnboardingRecommendations(
   
   // Check for overdue milestones
   const overdueMilestones = incompleteMilestones.filter(m => {
-    const expectedTime = new Date(m.expectedBy).getTime();
+    const expectedTime = new Date(m.expectedDate).getTime();
     return Date.now() > expectedTime;
   });
   

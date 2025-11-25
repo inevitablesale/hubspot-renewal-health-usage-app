@@ -177,7 +177,8 @@ export interface OnboardingMilestone {
   name: string;
   completed: boolean;
   completedAt?: string;
-  expectedBy: string;
+  expectedByDay: number; // Days after onboarding start
+  expectedDate: string;  // ISO date string
   isAhaMoment: boolean;
   weight: number;
 }
