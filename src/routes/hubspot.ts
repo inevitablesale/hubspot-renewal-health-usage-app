@@ -9,9 +9,22 @@ import {
 } from '../services/propertyService';
 import { calculateRenewalHealthScore } from '../services/scoringService';
 import { getUsageEvents, calculateFeatureAdoption } from '../services/usageEventsService';
-import { ApiResponse } from '../types';
+import { ApiResponse, UsageEvent } from '../types';
 
 const router = Router();
+
+/**
+ * Helper function to get last activity timestamp from events
+ */
+function getLastActivityFromEvents(events: UsageEvent[]): string | null {
+  if (events.length === 0) return null;
+  
+  const sortedEvents = events.sort((a, b) => 
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+  
+  return sortedEvents[0]?.timestamp ?? null;
+}
 
 /**
  * POST /api/hubspot/setup/:portalId
@@ -60,11 +73,8 @@ router.post(
     const events = getUsageEvents(companyId, 30);
     const features = calculateFeatureAdoption(companyId);
     
-    // Get last activity date
-    const sortedEvents = events.sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-    const lastActivity = sortedEvents.length > 0 ? sortedEvents[0]?.timestamp || null : null;
+    // Get last activity date using helper function
+    const lastActivity = getLastActivityFromEvents(events);
     
     // Update HubSpot
     updateCompanyHealthScore(
@@ -121,10 +131,8 @@ router.post(
           const events = getUsageEvents(companyId, 30);
           const features = calculateFeatureAdoption(companyId);
           
-          const sortedEvents = events.sort((a, b) => 
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-          );
-          const lastActivity = sortedEvents.length > 0 ? sortedEvents[0]?.timestamp || null : null;
+          // Use helper function for getting last activity
+          const lastActivity = getLastActivityFromEvents(events);
           
           await updateCompanyHealthScore(
             portalId,

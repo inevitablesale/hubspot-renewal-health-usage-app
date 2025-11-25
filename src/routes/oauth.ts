@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { getAuthorizationUrl, exchangeCodeForTokens, getPortalInfo, verifyConnection } from '../services/hubspotService';
 import { setTokens, getTokens, deleteTokens } from '../utils/tokenStore';
 import { ApiResponse } from '../types';
@@ -6,10 +7,25 @@ import { ApiResponse } from '../types';
 const router = Router();
 
 /**
+ * Rate limiter for OAuth routes to prevent brute force attacks
+ */
+const oauthRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 requests per window
+  message: {
+    success: false,
+    error: 'Too Many Requests',
+    message: 'Too many OAuth requests, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+/**
  * GET /oauth/authorize
  * Redirect to HubSpot OAuth authorization page
  */
-router.get('/authorize', (_req: Request, res: Response) => {
+router.get('/authorize', oauthRateLimiter, (_req: Request, res: Response) => {
   const authUrl = getAuthorizationUrl();
   res.redirect(authUrl);
 });
@@ -18,7 +34,7 @@ router.get('/authorize', (_req: Request, res: Response) => {
  * GET /oauth/callback
  * Handle OAuth callback from HubSpot
  */
-router.get('/callback', async (req: Request<object, ApiResponse<{ portalId: string }>, object, { code?: string; error?: string }>, res: Response<ApiResponse<{ portalId: string }>>) => {
+router.get('/callback', oauthRateLimiter, async (req: Request<object, ApiResponse<{ portalId: string }>, object, { code?: string; error?: string }>, res: Response<ApiResponse<{ portalId: string }>>) => {
   try {
     const { code, error } = req.query;
 
@@ -68,7 +84,7 @@ router.get('/callback', async (req: Request<object, ApiResponse<{ portalId: stri
  * GET /oauth/status/:portalId
  * Check OAuth connection status
  */
-router.get('/status/:portalId', async (req: Request<{ portalId: string }>, res: Response<ApiResponse<{ connected: boolean; portalId: string }>>) => {
+router.get('/status/:portalId', oauthRateLimiter, async (req: Request<{ portalId: string }>, res: Response<ApiResponse<{ connected: boolean; portalId: string }>>) => {
   try {
     const { portalId } = req.params;
     const tokens = getTokens(portalId);
@@ -102,7 +118,7 @@ router.get('/status/:portalId', async (req: Request<{ portalId: string }>, res: 
  * DELETE /oauth/disconnect/:portalId
  * Disconnect from HubSpot portal
  */
-router.delete('/disconnect/:portalId', (req: Request<{ portalId: string }>, res: Response<ApiResponse<null>>) => {
+router.delete('/disconnect/:portalId', oauthRateLimiter, (req: Request<{ portalId: string }>, res: Response<ApiResponse<null>>) => {
   try {
     const { portalId } = req.params;
     deleteTokens(portalId);

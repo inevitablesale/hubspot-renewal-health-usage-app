@@ -15,6 +15,35 @@ interface PropertyDefinition {
 }
 
 /**
+ * Property input structure for HubSpot API
+ * Using explicit interface instead of 'any' for type safety
+ */
+interface HubSpotPropertyInput {
+  name: string;
+  label: string;
+  type: PropertyType;
+  fieldType: FieldType;
+  groupName: string;
+  description: string;
+  options?: Array<{ label: string; value: string }>;
+}
+
+/**
+ * Search request structure for HubSpot API
+ */
+interface HubSpotSearchRequest {
+  filterGroups: Array<{
+    filters: Array<{
+      propertyName: string;
+      operator: string;
+      value: string;
+    }>;
+  }>;
+  properties: string[];
+  limit: number;
+}
+
+/**
  * Custom property definitions for renewal health
  */
 const RENEWAL_HEALTH_PROPERTIES: PropertyDefinition[] = [
@@ -87,9 +116,7 @@ export async function ensureCustomProperties(portalId: string): Promise<void> {
     } catch {
       // Property doesn't exist, create it
       try {
-        // Use 'as any' to bypass strict HubSpot SDK types
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const propertyInput: any = {
+        const propertyInput: HubSpotPropertyInput = {
           name: propDef.name,
           label: propDef.label,
           type: propDef.type,
@@ -102,7 +129,8 @@ export async function ensureCustomProperties(portalId: string): Promise<void> {
           propertyInput.options = propDef.options;
         }
         
-        await client.crm.properties.coreApi.create('companies', propertyInput);
+        // Cast to satisfy HubSpot SDK's strict enum types
+        await client.crm.properties.coreApi.create('companies', propertyInput as Parameters<typeof client.crm.properties.coreApi.create>[1]);
         console.log(`Created property: ${propDef.name}`);
       } catch (createError) {
         console.error(`Failed to create property ${propDef.name}:`, createError);
@@ -197,9 +225,7 @@ export async function getCompany(portalId: string, companyId: string) {
 export async function searchCompaniesByDomain(portalId: string, domain: string) {
   const client = await getHubSpotClient(portalId);
   
-  // Use 'as any' to bypass strict HubSpot SDK types for search request
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const searchRequest: any = {
+  const searchRequest: HubSpotSearchRequest = {
     filterGroups: [{
       filters: [{
         propertyName: 'domain',
@@ -211,5 +237,6 @@ export async function searchCompaniesByDomain(portalId: string, domain: string) 
     limit: 10
   };
   
-  return await client.crm.companies.searchApi.doSearch(searchRequest);
+  // Cast to satisfy HubSpot SDK's strict enum types for operator
+  return await client.crm.companies.searchApi.doSearch(searchRequest as Parameters<typeof client.crm.companies.searchApi.doSearch>[0]);
 }
