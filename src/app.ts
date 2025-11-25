@@ -10,6 +10,7 @@ import usageEventsRoutes from './routes/usageEvents';
 import scoresRoutes from './routes/scores';
 import crmCardRoutes from './routes/crmCard';
 import hubspotRoutes from './routes/hubspot';
+import intelligenceRoutes from './routes/intelligence';
 
 // Import middleware
 import { errorHandler } from './middleware';
@@ -35,13 +36,14 @@ app.use('/api/usage-events', usageEventsRoutes);
 app.use('/api/scores', scoresRoutes);
 app.use('/api/crm-card', crmCardRoutes);
 app.use('/api/hubspot', hubspotRoutes);
+app.use('/api/intelligence', intelligenceRoutes);
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {
   res.json({
-    name: 'HubSpot Renewal Health Usage App',
-    description: 'Ingest product-usage events, calculate renewal health scores, and surface insights in HubSpot',
-    version: '1.0.0',
+    name: 'HubSpot Customer Intelligence Suite',
+    description: 'Ingest product-usage events, calculate renewal health scores, and surface 360° customer insights in HubSpot',
+    version: '2.0.0',
     endpoints: {
       health: 'GET /health',
       oauth: {
@@ -60,6 +62,23 @@ app.get('/', (_req: Request, res: Response) => {
       scores: {
         get: 'GET /api/scores/:companyId',
         batch: 'GET /api/scores?companyIds=id1,id2,id3'
+      },
+      intelligence: {
+        suite: 'GET /api/intelligence/suite/:companyId',
+        mlTrend: {
+          get: 'GET /api/intelligence/ml-trend/:companyId',
+          batch: 'GET /api/intelligence/ml-trend?companyIds=id1,id2,id3'
+        },
+        onboarding: {
+          get: 'GET /api/intelligence/onboarding/:companyId',
+          setStartDate: 'POST /api/intelligence/onboarding/:companyId/start-date',
+          batch: 'GET /api/intelligence/onboarding?companyIds=id1,id2,id3'
+        },
+        expansion: {
+          get: 'GET /api/intelligence/expansion/:companyId',
+          setSeats: 'POST /api/intelligence/expansion/:companyId/seats',
+          batch: 'GET /api/intelligence/expansion?companyIds=id1,id2,id3'
+        }
       },
       crmCard: {
         card: 'GET /api/crm-card',

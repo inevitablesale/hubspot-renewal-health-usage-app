@@ -126,3 +126,130 @@ export interface ApiResponse<T> {
   error?: string;
   message?: string;
 }
+
+/**
+ * ML Usage Trend Detection Types
+ */
+export type BehavioralTrendClassification = 
+  | 'accelerating_usage'
+  | 'healthy_growth'
+  | 'stabilizing'
+  | 'soft_decline'
+  | 'sharp_decline'
+  | 'near_abandonment';
+
+export interface MLUsageTrend {
+  companyId: string;
+  trendScore: number; // 0-100
+  classification: BehavioralTrendClassification;
+  volatilityIndex: number; // Standard deviation of engagement
+  trendDirection: number; // Linear regression slope (positive = increasing)
+  trendStrength: number; // RMSE-normalized magnitude
+  usageSignature: string; // Cluster identifier
+  cohortDrift: {
+    previousCohort: string;
+    currentCohort: string;
+    driftDetected: boolean;
+  };
+  weeklyDeltas: number[]; // Week-over-week change percentages
+  movingAverage: number; // 7-day moving average
+  featureBreakdown: FeatureTrendBreakdown[];
+  calculatedAt: string;
+}
+
+export interface FeatureTrendBreakdown {
+  featureName: string;
+  slope: number;
+  usageCount: number;
+  trendDirection: 'up' | 'down' | 'stable';
+}
+
+/**
+ * Onboarding Health Score Types
+ */
+export type OnboardingStatus = 
+  | 'on_track'
+  | 'behind'
+  | 'blocked'
+  | 'at_risk';
+
+export interface OnboardingMilestone {
+  name: string;
+  completed: boolean;
+  completedAt?: string;
+  expectedBy: string;
+  isAhaMoment: boolean;
+  weight: number;
+}
+
+export interface OnboardingHealthScore {
+  companyId: string;
+  score: number; // 0-100
+  status: OnboardingStatus;
+  milestoneCoverageScore: number;
+  timeToFirstValue: number | null; // Days, null if not achieved
+  ahaMomentsReached: number;
+  ahaMomentsTotal: number;
+  onboardingForecastScore: number; // Predicted activation at Day 30
+  milestones: OnboardingMilestone[];
+  daysSinceOnboarding: number;
+  recommendations: string[];
+  calculatedAt: string;
+}
+
+/**
+ * Expansion Prediction Types
+ */
+export type ExpansionHorizon = 
+  | 'ready_now'      // <30 days
+  | 'likely_soon'    // 30-60 days
+  | 'potential'      // 60-90 days
+  | 'not_likely';    // >90 days or unlikely
+
+export type ExpansionVector = 
+  | 'seat_growth'
+  | 'add_ons'
+  | 'feature_upgrades'
+  | 'usage_based';
+
+export interface ExpansionPrediction {
+  companyId: string;
+  likelihoodScore: number; // 0-100
+  horizon: ExpansionHorizon;
+  vectors: ExpansionVectorDetail[];
+  seatUtilization: {
+    currentSeats: number;
+    licensedSeats: number;
+    utilizationPercent: number;
+    powerUsers: number;
+  };
+  expansionSignals: ExpansionSignal[];
+  recommendations: string[];
+  calculatedAt: string;
+}
+
+export interface ExpansionVectorDetail {
+  type: ExpansionVector;
+  score: number;
+  confidence: number;
+  reasoning: string;
+}
+
+export interface ExpansionSignal {
+  type: string;
+  strength: 'strong' | 'moderate' | 'weak';
+  description: string;
+  detectedAt: string;
+}
+
+/**
+ * Customer Intelligence Suite Combined Types
+ */
+export interface CustomerIntelligenceSuite {
+  companyId: string;
+  renewalHealth: RenewalHealthScore;
+  mlTrend?: MLUsageTrend;
+  onboardingHealth?: OnboardingHealthScore;
+  expansionPrediction?: ExpansionPrediction;
+  calculatedAt: string;
+}
