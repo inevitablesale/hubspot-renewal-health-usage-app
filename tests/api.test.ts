@@ -14,7 +14,7 @@ describe('API Endpoints', () => {
       const response = await request(app).get('/');
       
       expect(response.status).toBe(200);
-      expect(response.body.name).toBe('HubSpot Renewal Health Usage App');
+      expect(response.body.name).toBe('HubSpot Customer Intelligence Suite');
       expect(response.body.endpoints).toBeDefined();
     });
   });
@@ -195,15 +195,18 @@ describe('API Endpoints', () => {
   });
 
   describe('GET /api/crm-card', () => {
-    it('should return CRM card data', async () => {
+    it('should return CRM card data with all intelligence sections', async () => {
       const response = await request(app)
         .get('/api/crm-card')
         .query({ associatedObjectId: testCompanyId, associatedObjectType: 'COMPANY' });
 
       expect(response.status).toBe(200);
       expect(response.body.results).toBeDefined();
-      expect(response.body.results).toHaveLength(1);
-      expect(response.body.results[0].title).toBe('Renewal Health');
+      expect(response.body.results).toHaveLength(4); // Renewal, ML Trends, Onboarding, Expansion
+      expect(response.body.results[0].title).toBe('🔄 Renewal Health');
+      expect(response.body.results[1].title).toBe('📊 ML Usage Trends');
+      expect(response.body.results[2].title).toBe('🚀 Onboarding Health');
+      expect(response.body.results[3].title).toBe('📈 Expansion Prediction');
     });
 
     it('should handle missing company ID', async () => {
@@ -223,7 +226,7 @@ describe('API Endpoints', () => {
 
       expect(response.status).toBe(200);
       expect(response.type).toBe('text/html');
-      expect(response.text).toContain('Renewal Health Score');
+      expect(response.text).toContain('Customer Intelligence Suite');
     });
 
     it('should return error for missing company ID', async () => {
